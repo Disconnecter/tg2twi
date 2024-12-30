@@ -1,7 +1,7 @@
 import logging
 import os
 import time
-from telegram.ext import Application, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, MessageHandler, filters  # Removed unused ContextTypes import
 import pytwitter
 from dotenv import load_dotenv
 import traceback
@@ -57,6 +57,7 @@ def post_to_twitter(text, post_id):
         logger.info(f"Posted to Twitter: {tweet_text}")
     except Exception as e:
         logger.error(f"Error posting to Twitter: {e}")
+        logger.error(traceback.format_exc())  # Log the traceback
         raise
 
 
@@ -65,7 +66,7 @@ async def handle_new_message(update, context):
     try:
         # Check for channel_post and text
         if not update.channel_post or not update.channel_post.text:
-            logger.warning("Received an update with no text in channel_post. {update}")
+            logger.warning(f"Received an update with no text in channel_post. {update}")
             return
 
         message = update.channel_post.text
@@ -74,6 +75,7 @@ async def handle_new_message(update, context):
         post_to_twitter(message, message_id)
     except Exception as e:
         logger.error(f"Error in handle_new_message: {e}")
+        logger.error(traceback.format_exc())  # Log the traceback
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.error("Exception while handling an update:", exc_info=context.error)
@@ -89,6 +91,7 @@ async def get_updates_with_retry(bot):
 
 # Main bot logic with error handler
 def main():
+    application = None  # Ensure application is defined outside the try block
     while True:
         try:
             request = HTTPXRequest(connect_timeout=30.0, read_timeout=60.0)
@@ -98,8 +101,6 @@ def main():
             application.add_handler(message_handler)
             application.add_error_handler(error_handler)
 
-            # Run the bot
-            #application.run_polling(poll_interval=20.0, timeout=30, close_loop=True)
             # Replace polling loop to use the retry logic
             async def polling_loop():
                 while True:
@@ -121,8 +122,9 @@ def main():
             time.sleep(5)  # Delay before restarting
 
         except KeyboardInterrupt:
-            application.stop_running()
-            application.stop()
+            if application:
+                application.stop_running()
+                application.stop()
             logger.info("Bot stopped by user.")
             sys.exit(1)
 
