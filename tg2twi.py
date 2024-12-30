@@ -1,7 +1,7 @@
 import logging
 import os
 import time
-from telegram.ext import Application, MessageHandler, filters  # Removed unused ContextTypes import
+from telegram.ext import Application, MessageHandler, filters, ContextTypes
 import pytwitter
 from dotenv import load_dotenv
 import traceback
@@ -57,7 +57,6 @@ def post_to_twitter(text, post_id):
         logger.info(f"Posted to Twitter: {tweet_text}")
     except Exception as e:
         logger.error(f"Error posting to Twitter: {e}")
-        logger.error(traceback.format_exc())  # Log the traceback
         raise
 
 
@@ -75,7 +74,6 @@ async def handle_new_message(update, context):
         post_to_twitter(message, message_id)
     except Exception as e:
         logger.error(f"Error in handle_new_message: {e}")
-        logger.error(traceback.format_exc())  # Log the traceback
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.error("Exception while handling an update:", exc_info=context.error)
@@ -91,7 +89,6 @@ async def get_updates_with_retry(bot):
 
 # Main bot logic with error handler
 def main():
-    application = None  # Ensure application is defined outside the try block
     while True:
         try:
             request = HTTPXRequest(connect_timeout=30.0, read_timeout=60.0)
@@ -122,9 +119,8 @@ def main():
             time.sleep(5)  # Delay before restarting
 
         except KeyboardInterrupt:
-            if application:
-                application.stop_running()
-                application.stop()
+            application.stop_running()
+            application.stop()
             logger.info("Bot stopped by user.")
             sys.exit(1)
 
